@@ -21,7 +21,9 @@
 html { scroll-behavior: smooth; }
 body { min-height: 100dvh; }
 ::selection { background: var(--color-sun); color: var(--color-ink); }
-:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px; }
+@layer base {
+  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px; }
+}
 
 /* highlighted query terms in titles / snippets */
 mark.hl { background: linear-gradient(transparent 55%, rgb(243 198 79 / 0.65) 55%); color: inherit; padding: 0 1px; }

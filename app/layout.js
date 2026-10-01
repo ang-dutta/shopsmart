@@ -3,7 +3,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 export const metadata = {
-  title: { default: 'ShopSmart | Search that understands what you meant', template: '%s · ShopSmart' },
+  title: 'ShopSmart',
   description: 'A product search & recommendation engine built from scratch: inverted index, TF-IDF, BM25, spelling correction and collaborative filtering.',
 };
 

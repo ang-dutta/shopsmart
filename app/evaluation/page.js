@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import { getEvaluation } from '@/lib/eval/cache';
 
-export const metadata = { title: 'Evaluation' };
-
 const pct = (x) => x.toFixed(3);
 const COLORS = { tfidf: '#6e6a5e', bm25: '#e2492b', 'tfidf-syn': '#b9b3a2', 'bm25-syn': '#1d3b2e' };
 

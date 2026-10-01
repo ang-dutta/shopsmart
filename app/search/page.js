@@ -8,11 +8,6 @@ import ProductGrid from '@/components/ProductGrid';
 import Pagination from '@/components/Pagination';
 import { categoryStyle } from '@/lib/format';
 
-export async function generateMetadata({ searchParams }) {
-  const sp = await searchParams;
-  return { title: sp.q ? `“${[].concat(sp.q)[0]}”` : 'Browse all products' };
-}
-
 export default async function SearchPage({ searchParams }) {
   const sp = await searchParams, p = parseSearchParams(sp), data = getData();
   const res = search(data, { q: p.q, model: p.model, expand: p.expand, exact: p.exact, filters: p.filters, sort: p.sort, page: p.page, pageSize: 24 });

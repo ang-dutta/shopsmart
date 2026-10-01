@@ -10,11 +10,6 @@ import Recommended from '@/components/Recommended';
 import ViewTracker from '@/components/ViewTracker';
 import { money } from '@/lib/format';
 
-export async function generateMetadata({ params }) {
-  const { id } = await params, d = getData(), pos = d.idToPos.get(id);
-  return { title: pos === undefined ? 'Not found' : d.products[pos].title };
-}
-
 export default async function ProductPage({ params }) {
   const { id } = await params, data = getData(), pos = data.idToPos.get(id);
   if (pos === undefined) notFound();

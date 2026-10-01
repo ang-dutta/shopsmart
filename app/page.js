@@ -24,7 +24,7 @@ export default function Home() {
         <h1 className="fade-up mx-auto max-w-4xl font-display text-5xl leading-[1.02] tracking-tight sm:text-7xl" style={{ animationDelay: '60ms' }}>
           Find the thing you <span className="italic text-accent">actually</span> had in mind.
         </h1>
-        <div className="fade-up mx-auto mt-10 max-w-2xl text-left" style={{ animationDelay: '120ms' }}><SearchBox variant="hero" /></div>
+        <div className="fade-up relative z-30 mx-auto mt-10 max-w-2xl text-left" style={{ animationDelay: '120ms' }}><SearchBox variant="hero" /></div>
         <div className="fade-up mt-5 flex flex-wrap items-center justify-center gap-2 text-sm" style={{ animationDelay: '180ms' }}>
           <span className="text-muted">Try</span>
           {TRY.map((t) => <Link key={t} href={`/search?q=${encodeURIComponent(t)}`} className="rounded-full border border-line bg-white px-3.5 py-1.5 font-semibold transition hover:border-ink hover:bg-ink hover:text-white">{t}</Link>)}
