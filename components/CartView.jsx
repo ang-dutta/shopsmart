@@ -4,13 +4,20 @@ import Link from 'next/link';
 import ProductImage from './ProductImage';
 import Recommended from './Recommended';
 import { ArrowIcon, CartIcon, MinusIcon, PlusIcon, TrashIcon, CheckIcon } from './Icons';
-import { getUser } from '@/lib/auth';
-import { clearCart, getCartItems, onStore, removeFromCart, setQty } from '@/lib/client-store';
+import { useAuth } from '@/lib/useAuth';
+import { clearCart, getCartItems, removeFromCart, setQty } from '@/lib/cart';
+import { onCart } from '@/lib/client-store';
 import { money } from '@/lib/format';
 
 export default function CartView() {
-  const [ready, setReady] = useState(false), [user, setUser] = useState(null), [lines, setLines] = useState([]), [products, setProducts] = useState({}), [order, setOrder] = useState(null);
-  useEffect(() => { const s = () => { setUser(getUser()); setLines(getCartItems()); setReady(true); }; s(); return onStore(s); }, []);
+  const { user, ready: authReady } = useAuth(), uid = user?.id;
+  const [loaded, setLoaded] = useState(false), [lines, setLines] = useState([]), [products, setProducts] = useState({}), [order, setOrder] = useState(null), [err, setErr] = useState('');
+  const load = () => getCartItems().then((l) => { setLines(l); setErr(''); setLoaded(true); }).catch((e) => { setErr(e.message); setLoaded(true); });
+  useEffect(() => {
+    if (!uid) { setLines([]); setLoaded(true); return; }
+    load();
+    return onCart(load);
+  }, [uid]);
   const key = lines.map((l) => l.id).join(',');
   useEffect(() => {
     if (!key) return;
@@ -18,6 +25,9 @@ export default function CartView() {
     fetch('/api/products?ids=' + key).then((r) => r.json()).then((j) => alive && setProducts(Object.fromEntries(j.products.map((p) => [p.id, p])))).catch(() => {});
     return () => { alive = false; };
   }, [key]);
+  const ready = authReady && loaded;
+  const change = (id, qty) => { setLines((ls) => ls.map((l) => (l.id === id ? { ...l, qty } : l))); setQty(id, qty).catch((e) => { setErr(e.message); load(); }); };
+  const remove = (id) => { setLines((ls) => ls.filter((l) => l.id !== id)); removeFromCart(id).catch((e) => { setErr(e.message); load(); }); };
 
   if (!ready) return <div className="skeleton h-80" />;
 
@@ -52,12 +62,13 @@ export default function CartView() {
   );
 
   const total = lines.reduce((s, l) => s + (products[l.id]?.price ?? 0) * l.qty, 0), count = lines.reduce((s, l) => s + l.qty, 0);
-  const loaded = lines.every((l) => products[l.id]);
-  const checkout = () => { setOrder({ id: 'SS-' + Date.now().toString(36).toUpperCase(), total, count }); clearCart(); };
+  const allLoaded = lines.every((l) => products[l.id]);
+  const checkout = () => { setOrder({ id: 'SS-' + Date.now().toString(36).toUpperCase(), total, count }); clearCart().catch((e) => setErr(e.message)); };
 
   return (
     <>
       <h1 className="font-display text-4xl sm:text-5xl">Your cart <span className="text-muted">({count})</span></h1>
+      {err && <p role="alert" className="mt-4 rounded-2xl bg-accent-soft px-4 py-2.5 text-sm font-semibold text-accent">Cart problem: {err}</p>}
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_22rem]">
         <ul className="space-y-3">
           {lines.map((l) => {
@@ -73,12 +84,12 @@ export default function CartView() {
                       <p className="text-sm text-muted">{money(p.price)} each</p>
                       <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
                         <div className="inline-flex items-center rounded-full border border-line">
-                          <button onClick={() => setQty(l.id, l.qty - 1)} disabled={l.qty <= 1} aria-label="Decrease quantity" className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-paper disabled:opacity-30"><MinusIcon width={16} height={16} /></button>
+                          <button onClick={() => change(l.id, l.qty - 1)} disabled={l.qty <= 1} aria-label="Decrease quantity" className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-paper disabled:opacity-30"><MinusIcon width={16} height={16} /></button>
                           <span className="w-8 text-center text-sm font-bold tabular-nums" aria-live="polite">{l.qty}</span>
-                          <button onClick={() => setQty(l.id, l.qty + 1)} disabled={l.qty >= 20} aria-label="Increase quantity" className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-paper disabled:opacity-30"><PlusIcon width={16} height={16} /></button>
+                          <button onClick={() => change(l.id, l.qty + 1)} disabled={l.qty >= 20} aria-label="Increase quantity" className="grid h-9 w-9 place-items-center rounded-full transition hover:bg-paper disabled:opacity-30"><PlusIcon width={16} height={16} /></button>
                         </div>
                         <span className="text-lg font-bold tracking-tight">{money(Math.round(p.price * l.qty * 100) / 100)}</span>
-                        <button onClick={() => removeFromCart(l.id)} aria-label={`Remove ${p.title}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition hover:text-accent"><TrashIcon width={15} height={15} /> Remove</button>
+                        <button onClick={() => remove(l.id)} aria-label={`Remove ${p.title}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted transition hover:text-accent"><TrashIcon width={15} height={15} /> Remove</button>
                       </div>
                     </div>
                   </>
@@ -94,8 +105,8 @@ export default function CartView() {
             <div className="flex justify-between"><dt className="text-muted">Shipping</dt><dd className="font-semibold text-forest">Free</dd></div>
             <div className="flex justify-between border-t border-line pt-3 text-base"><dt className="font-bold">Total</dt><dd className="font-bold">{money(Math.round(total * 100) / 100)}</dd></div>
           </dl>
-          <button onClick={checkout} disabled={!loaded} className="mt-5 w-full rounded-full bg-ink py-3.5 text-sm font-bold text-white transition hover:bg-accent disabled:opacity-50">Checkout (demo)</button>
-          <button onClick={clearCart} className="mt-2 w-full rounded-full py-2.5 text-xs font-semibold text-muted transition hover:text-accent">Empty cart</button>
+          <button onClick={checkout} disabled={!allLoaded} className="mt-5 w-full rounded-full bg-ink py-3.5 text-sm font-bold text-white transition hover:bg-accent disabled:opacity-50">Checkout (demo)</button>
+          <button onClick={() => clearCart().catch((e) => setErr(e.message))} className="mt-2 w-full rounded-full py-2.5 text-xs font-semibold text-muted transition hover:text-accent">Empty cart</button>
         </aside>
       </div>
       <Recommended title="You may also like" hintWhenEmpty={false} />

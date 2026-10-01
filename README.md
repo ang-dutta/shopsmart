@@ -12,7 +12,7 @@ An Information Retrieval course project: a full e-commerce search engine and rec
 npm install
 npm run data        # generate 5,000 products + 65k interactions + eval queries, then build the index (~10 s)
 npm run dev         # http://localhost:3000
-npm test            # unit tests (stemmer, metrics, ranking, CSV, login, cart)
+npm test            # unit tests (stemmer, metrics, ranking, CSV, auth helpers)
 npm run eval        # print the evaluation table in the terminal
 ```
 
@@ -43,12 +43,20 @@ data/processed/         index.json, products.json, lexicon.json, suggest.json, s
 data/eval/queries.json  test queries + relevance judgments
 ```
 
-## Login and cart
+## Login and cart (Supabase)
 
-- Adding to the cart requires an account. Clicking **Add to cart** while signed out sends you to `/login` and back to the page you were on.
-- `/login` has **Sign in** and **Create account** tabs. `/cart` shows your items with quantity controls, remove, order summary and a demo checkout (nothing is charged). The header shows a cart badge and an account menu with sign out.
-- Each account has its own cart, saved in the browser (`shopsmart:cart:<email>`). Items in the cart also feed the "Recommended for you" row.
-- **This is demo authentication.** Accounts live in the browser's localStorage (`lib/auth.js`), passwords are hashed with PBKDF2-SHA256 and a random salt, and nothing is sent to a server, so accounts are not shared across devices or browsers. For a production app, replace `lib/auth.js` and the cart functions in `lib/client-store.js` with a real provider such as Supabase or Firebase Auth plus a database, keeping the same function names.
+- Accounts use **Supabase Auth** (email and password). Carts are stored in the Postgres table `cart_items` (`supabase/schema.sql`), protected by **row level security**, so the database itself only ever returns the signed-in user's own rows.
+- Clicking **Add to cart** while signed out sends you to `/login` and back. `/cart` has quantity controls, remove, an order summary and a demo checkout (nothing is charged). The header shows a cart badge and an account menu with sign out. Cart items also feed "Recommended for you".
+- Code: `lib/supabase.js` (browser client), `lib/auth.js` (register, login, logout), `lib/useAuth.js` (React hook), `lib/cart.js` (cart queries).
+
+### Setup
+1. Create a Supabase project and run `supabase/schema.sql` in the SQL editor.
+2. Authentication, Providers: enable **Email**. For a demo, switch **Confirm email** off.
+3. Copy `.env.example` to `.env.local` and fill in the project URL and publishable key (Project Settings, API Keys).
+4. Authentication, URL Configuration: set the Site URL to your Vercel address and add `http://localhost:3000/**` and `https://<your-project>.vercel.app/**` as redirect URLs.
+5. On Vercel, add the same environment variables and redeploy (`NEXT_PUBLIC_` values are fixed at build time).
+
+Never put the Supabase `service_role` key in a `NEXT_PUBLIC_` variable. The publishable key is safe in the browser only because row level security is on.
 
 ---
 
@@ -131,7 +139,7 @@ Four systems are compared: TF-IDF, BM25, and each with synonym expansion. A pair
 ## Deploying to Vercel
 1. Push the repo to GitHub (commit `data/raw/` and `data/eval/`; `data/processed/` may be committed too or rebuilt).
 2. Import it at vercel.com/new - framework preset *Next.js*, default settings. The `build` script regenerates the index; `outputFileTracingIncludes` in `next.config.mjs` ships `data/processed` and `data/eval` with the serverless functions.
-3. Optional env var: `NEXT_PUBLIC_CURRENCY` (default `USD`, e.g. `INR`).
+3. Environment variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, and optionally `NEXT_PUBLIC_CURRENCY` (default `USD`, e.g. `INR`).
 
 ## Ideas to extend it
 Phrase queries with positional postings · query-time field boosts · learning-to-rank from click logs · BM25F · dense embeddings for re-ranking · A/B comparison of `k1`/`b` on the evaluation page.

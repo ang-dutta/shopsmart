@@ -4,14 +4,25 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import SearchBox from './SearchBox';
 import { CartIcon, UserIcon } from './Icons';
-import { getUser, logout } from '@/lib/auth';
-import { cartCount, onStore } from '@/lib/client-store';
+import { logout } from '@/lib/auth';
+import { useAuth } from '@/lib/useAuth';
+import { cartCount } from '@/lib/cart';
+import { onCart } from '@/lib/client-store';
 
 export default function Header() {
   const path = usePathname(), router = useRouter();
-  const [count, setCount] = useState(0), [user, setUser] = useState(null), [menu, setMenu] = useState(false);
+  const { user, ready } = useAuth();
+  const [count, setCount] = useState(0), [menu, setMenu] = useState(false);
+  const uid = user?.id;
   const menuRef = useRef(null);
-  useEffect(() => { const s = () => { setUser(getUser()); setCount(cartCount()); }; s(); return onStore(s); }, []);
+  useEffect(() => {
+    if (!uid) { setCount(0); return; }
+    let alive = true;
+    const s = () => cartCount().then((c) => alive && setCount(c)).catch(() => {});
+    s();
+    const off = onCart(s);
+    return () => { alive = false; off(); };
+  }, [uid]);
   useEffect(() => {
     const h = (e) => menuRef.current && !menuRef.current.contains(e.target) && setMenu(false);
     document.addEventListener('mousedown', h);
@@ -43,10 +54,12 @@ export default function Header() {
                 <div role="menu" className="pop-in absolute right-0 top-12 w-60 overflow-hidden rounded-2xl border border-line bg-white p-2 shadow-lift">
                   <div className="px-3 py-2"><p className="truncate text-sm font-bold">{user.name}</p><p className="truncate text-xs text-muted">{user.email}</p></div>
                   <Link href="/cart" role="menuitem" className="block rounded-xl px-3 py-2 text-sm font-semibold hover:bg-paper">My cart {count > 0 && `(${count})`}</Link>
-                  <button role="menuitem" onClick={() => { logout(); router.push('/'); }} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-accent hover:bg-accent-soft">Sign out</button>
+                  <button role="menuitem" onClick={async () => { await logout(); setMenu(false); router.push('/'); }} className="block w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-accent hover:bg-accent-soft">Sign out</button>
                 </div>
               )}
             </div>
+          ) : !ready ? (
+            <span className="ml-1 h-10 w-10 rounded-full skeleton" aria-hidden />
           ) : (
             <Link href={`/login?next=${encodeURIComponent(path)}`} className="ml-1 inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent"><UserIcon width={16} height={16} /> <span className="hidden sm:inline">Sign in</span></Link>
           )}

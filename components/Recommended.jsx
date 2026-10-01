@@ -1,23 +1,28 @@
 'use client';
 import { useEffect, useState } from 'react';
 import ProductGrid from './ProductGrid';
-import { getViewed, getCart, onStore } from '@/lib/client-store';
+import { getViewed } from '@/lib/client-store';
+import { getCartIds } from '@/lib/cart';
+import { useAuth } from '@/lib/useAuth';
 
 export default function Recommended({ title = 'Recommended for you', hintWhenEmpty = true, exclude }) {
   const [state, setState] = useState({ loading: true, items: [], personalised: false });
+  const { user, ready } = useAuth(), uid = user?.id;
   useEffect(() => {
+    if (!ready) return;
     let alive = true;
     const load = async () => {
       const viewed = getViewed().filter((id) => id !== exclude);
       try {
-        const r = await fetch('/api/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ viewed, cart: getCart() }) });
+        const cart = uid ? await getCartIds().catch(() => []) : [];
+        const r = await fetch('/api/recommend', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ viewed, cart }) });
         const j = await r.json();
         if (alive) setState({ loading: false, items: j.items, personalised: j.personalised });
       } catch { if (alive) setState((s) => ({ ...s, loading: false })); }
     };
     load();
     return () => { alive = false; };
-  }, [exclude]);
+  }, [exclude, ready, uid]);
 
   if (!state.loading && !state.items.length) return null;
   return (
