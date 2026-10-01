@@ -1,0 +1,11 @@
+import { getData, getEvalQueries } from '../lib/data.js';
+import { runEvaluation } from '../lib/eval/run.js';
+const queries = getEvalQueries();
+if (!queries.length) throw new Error('No data/eval/queries.json found.');
+const r = runEvaluation(getData(), queries);
+const f = (x) => x.toFixed(3);
+console.log(`\nShopSmart retrieval evaluation - ${r.nQueries} queries\n`);
+console.log('system'.padEnd(20), ...['P@10', 'R@10', 'nDCG@10', 'MAP', 'MRR'].map((h) => h.padStart(8)));
+for (const s of r.systems) console.log(s.label.padEnd(20), ...[s.mean.P[10], s.mean.R[10], s.mean.nDCG[10], s.mean.MAP, s.mean.MRR].map((x) => f(x).padStart(8)));
+const t = r.significance.bm25VsTfidf;
+console.log(`\nBM25 vs TF-IDF on AP: mean diff ${t.meanDiff.toFixed(4)}, t = ${t.t.toFixed(2)}, p ≈ ${t.p.toFixed(4)} (n=${t.n})`);

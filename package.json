@@ -1,0 +1,26 @@
+{
+  "name": "shopsmart",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "data:generate": "node scripts/generate-data.mjs",
+    "data:index": "node scripts/build-index.mjs",
+    "data": "npm run data:generate && npm run data:index",
+    "prebuild": "npm run data",
+    "build": "next build",
+    "start": "next start",
+    "test": "node --test",
+    "eval": "node scripts/evaluate-cli.mjs"
+  },
+  "dependencies": {
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4"
+  },
+  "type": "module"
+}
